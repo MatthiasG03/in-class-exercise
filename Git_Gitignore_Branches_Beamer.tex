@@ -1,0 +1,169 @@
+\documentclass{beamer}
+\usetheme{default}
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+
+\title{Git: \texttt{.gitignore} \& Branches}
+\subtitle{Warum das PDF nach Branch-Wechsel „falsch“ wirken kann}
+\author{\texorpdfstring{Elshan Garashli\\\texttt{elshan.garashli@uni-graz.at}}{Elshan Garashli}}
+\institute{Universität Graz}
+\date{\today}
+
+\begin{document}
+
+\frame{\titlepage}
+
+% ---------- .gitignore ----------
+\begin{frame}{Was ist \texttt{.gitignore}?}
+\begin{itemize}
+\item \textbf{Ja — es ist eine Datei:} eine Textdatei im \textbf{Projektroot}, deren \textbf{Dateiname} exakt \texttt{.gitignore} lautet (Punkt am Anfang → unter macOS/Linux oft als „versteckt“ sichtbar).
+\item \textbf{Inhalt:} Zeilen mit \textbf{Mustern} (\texttt{*.pdf}, \texttt{raw\_data/}, \ldots) — Regeln, welche \textbf{anderen} Dateien und Ordner Git \textbf{nicht} versionieren soll.
+\item \textbf{Ignoriert} sind also die \textbf{genannten} Dateien — nicht die \texttt{.gitignore} selbst; die legt man normalerweise \textbf{mit ins Repo} (committen), damit alle dieselben Regeln haben.
+\item \textbf{Merksatz:} \texttt{.gitignore} = Ignore-\textbf{Liste}; die ignorierten Dateien bleiben auf der Platte, tauchen aber nicht in Commits auf.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Was gehört oft in \texttt{.gitignore}? (1/2)}
+\textbf{Daten, Geheimnisse, Umgebung}
+\begin{itemize}
+\item \textbf{Geheimnisse \& Zugangsdaten:} \texttt{*.env}, API-Keys, \texttt{credentials.json}
+\item \textbf{Rohdaten / sensibel:} \texttt{raw\_data/}, echte Kunden- oder Personendaten (\texttt{*.csv})
+\item \textbf{Abhängigkeiten} (lokal neu installierbar): \texttt{node\_modules/} (JavaScript), \texttt{.venv/} (Python)
+\end{itemize}
+\vspace{0.5em}
+\textbf{Prinzip:} Nichts ins Repo, was \textbf{leakt}, \textbf{personenbezogen} ist oder sich mit einem Befehl (\texttt{npm install}, \texttt{pip install}) wiederherstellen lässt.
+\end{frame}
+
+\begin{frame}{Was gehört oft in \texttt{.gitignore}? (2/2)}
+\textbf{Build, Medien, lokale Dateien}
+\begin{itemize}
+\item \textbf{Build \& Cache:} \texttt{dist/}, \texttt{build/}, \texttt{\_\_pycache\_\_/}
+\item \textbf{LaTeX (Artefakte):} \texttt{*.pdf}, \texttt{*.aux}, \texttt{*.log} — Quellen (\texttt{.tex}, \texttt{.bib}) dagegen versionieren
+\item \textbf{Medien:} oft \texttt{uploads/} oder sehr große Rohfotos; \emph{kleine} PNG/JPG (Icons, Logo, UI) häufig \textbf{bewusst} im Repo
+\item \textbf{Lokal / System:} \texttt{.DS\_Store}, \texttt{*.log}
+\end{itemize}
+\vspace{0.3em}
+\textbf{Vorlagen:} \texttt{github.com/github/gitignore} — z.\,B.\ \emph{Node}, \emph{Python}, \emph{LaTeX}, zum Kopieren und Anpassen.
+\end{frame}
+
+\begin{frame}[fragile]{Beispiel: PDFs nicht versionieren}
+In vielen LaTeX-Repos (auch hier):
+\begin{verbatim}
+# PDFs — lokal neu bauen statt einchecken
+*.pdf
+\end{verbatim}
+\vspace{0.4em}
+\textbf{Konsequenz:}
+\begin{itemize}
+\item \texttt{paper.tex} und \texttt{references.bib} → \textbf{getrackt} (in Git, pro Branch).
+\item \texttt{paper.pdf} → \textbf{nicht getrackt}; liegt nur auf \textbf{Ihrer Festplatte}.
+\item Git speichert die \textbf{Quelle}, nicht automatisch das erzeugte PDF.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Was Git bei ignorierten Dateien \emph{nicht} tut}
+\begin{itemize}
+\item Beim \textbf{Commit}: ignorierte Dateien werden nicht mitgespeichert.
+\item Beim \textbf{Branch-Wechsel} (\texttt{checkout} / \texttt{switch}): Git tauscht \textbf{nur getrackte} Dateien aus.
+\item Eine ignorierte \texttt{paper.pdf} bleibt liegen — Git \textbf{ersetzt} sie nicht und \textbf{baut} sie nicht neu.
+\item Das PDF auf dem Bildschirm ist daher: \textbf{letzter lokaler LaTeX-Lauf} — unabhängig vom aktuellen Branch, solange Sie nicht neu kompilieren.
+\end{itemize}
+\end{frame}
+
+% ---------- Branches ----------
+\begin{frame}{Branches — kurz}
+\begin{itemize}
+\item \textbf{Branch (Zweig):} parallele Entwicklungslinie mit eigener Commit-Historie, z.\,B.\ \texttt{main} und \texttt{kapitel-2}.
+\item \textbf{Wechseln} (\texttt{git switch <branch>}): Git setzt den Arbeitsbaum auf den \textbf{Stand dieses Zweigs} — für \textbf{alle getrackten} Dateien.
+\item Beispiel: \texttt{paper2\_knife\_edge.tex} ändert sich beim Wechsel — das sehen Sie in Cursor sofort.
+\item \textbf{Merksatz:} Branch = welche \textbf{versionierte} Version der Quellen gilt; nicht „automatisch neu gebaut“.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Die häufige Verwechslung}
+\textbf{Frage:} „Ich habe den Branch gewechselt — warum zeigt die PDF noch die alte Version?“
+
+\vspace{0.5em}
+\textbf{Antwort in einem Satz:}\\
+Weil \texttt{*.pdf} in \texttt{.gitignore} steht, gehört die PDF \textbf{nicht} zu Git — der Branch-Wechsel aktualisiert nur \texttt{.tex} (und andere getrackte Dateien), \textbf{nicht} die PDF auf der Platte.
+
+\vspace{0.5em}
+Die PDF kann noch vom \textbf{vorherigen Branch} stammen (letzter Compile dort) oder einfach veraltet sein.
+\end{frame}
+
+\begin{frame}{Was passiert beim Branch-Wechsel? (Schema)}
+\begin{enumerate}
+\item Git aktualisiert \textbf{getrackte} Dateien → z.\,B.\ anderer \texttt{.tex}-Inhalt.
+\item \texttt{paper.pdf} (ignoriert) → \textbf{unverändert} auf der Festplatte, bis Sie LaTeX erneut laufen lassen.
+\item Ergebnis: Quelltext passt zum Branch, PDF evtl.\ \textbf{noch nicht}.
+\end{enumerate}
+\vspace{0.3em}
+\textbf{Lösung nach jedem Branch-Wechsel:}
+\begin{itemize}
+\item \texttt{.tex} neu kompilieren (pdfLaTeX / latexmk).
+\item Bei geänderten Zitaten: BibTeX/Biber erneut ausführen, dann nochmal kompilieren.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Sonderfall: PDF doch im Repo?}
+\begin{itemize}
+\item Wenn auf manchen Branches PDFs \textbf{committed} wurden (hier unüblich wegen \texttt{*.pdf} in \texttt{.gitignore}):
+\item Beim Checkout könnte Git eine \textbf{alte, eingecheckte} PDF dieser Branch-Version ausliefern.
+\item Das ist trotzdem nur ein \textbf{Snapshot von früher} — kein frischer Build aus dem aktuellen \texttt{.tex}.
+\item \textbf{Regel bleibt:} PDF vertrauen = nach Quellwechsel (Branch \emph{oder} Pull) \textbf{neu kompilieren}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Praxis-Checkliste (LaTeX + Git)}
+\begin{enumerate}
+\item Branch gewechselt oder \texttt{git pull} mit geändertem \texttt{.tex}? → \textbf{PDF neu bauen.}
+\item Nur \texttt{.tex}/\texttt{.bib} committen; \texttt{*.pdf} in \texttt{.gitignore} lassen (Repo schlank, klare Diffs).
+\item Verwirrt die PDF? → Zuerst prüfen: \textbf{welcher Branch?} Dann: \textbf{wann zuletzt kompiliert?}
+\item In Cursor: getrackte Änderungen im Git-Panel; PDF erscheint dort \textbf{nicht}, wenn ignoriert — das ist \textbf{gewollt}.
+\end{enumerate}
+\end{frame}
+
+\begin{frame}{\texttt{.gitignore} auf verschiedenen Branches}
+\begin{itemize}
+\item \textbf{Braucht jeder Branch eine eigene \texttt{.gitignore}?}\\
+\textbf{Nein.} Es gibt normalerweise \textbf{eine} Datei \texttt{.gitignore} im Projektroot — wie \texttt{README.md} oder \texttt{.tex}. Git speichert sie in der Historie; beim Branch-Wechsel sehen Sie die \textbf{Version dieses Zweigs}.
+\item \textbf{Können die Regeln auf Branches unterschiedlich sein?}\\
+\textbf{Ja.} Wenn ein Branch \texttt{.gitignore} noch nicht hat (oder andere Zeilen committed hat), gelten nach dem Wechsel \textbf{dort} andere Ignore-Regeln — bis Sie die Dateien angleichen (merge/rebase).
+\item \textbf{Eine \texttt{.gitignore} für alle Branches?}\\
+\textbf{Üblich und empfohlen:} dieselbe Ignore-Liste fürs ganze Repo; auf \texttt{main} pflegen und in Feature-Branches übernehmen. Git hat \textbf{kein} separates „Ignore pro Branch“ — nur unterschiedliche \textbf{Datei-Inhalte} in der Branch-Historie.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Wann hat der neue Branch \texttt{.gitignore}?}
+\textbf{Entscheidend ist der Zeitpunkt — nicht der Branch-Name.}
+
+\vspace{0.4em}
+\textbf{Fall A: \texttt{.gitignore} war schon da, \emph{dann} neuer Branch}
+\begin{itemize}
+\item Sie committen \texttt{.gitignore} auf \texttt{main} (oder \texttt{master}).
+\item \textbf{Danach:} \texttt{git switch -c feature-xyz} — der neue Branch \textbf{startet mit} dieser Datei.
+\item \textbf{Merksatz:} Was zum Abzweigpunkt in der Historie liegt, hat der neue Branch \textbf{von Anfang an mit}.
+\end{itemize}
+
+\vspace{0.3em}
+\textbf{Fall B: Neuer Branch zuerst, \texttt{.gitignore} erst später auf \texttt{main}}
+\begin{itemize}
+\item Feature-Branch von einem \textbf{älteren} Stand abgezweigt — \textbf{ohne} \texttt{.gitignore}.
+\item Später nur auf \texttt{main} committed → \texttt{main} hat die Datei, der Feature-Branch \textbf{noch nicht}.
+\item \textbf{Lösung:} \texttt{git merge main} (oder \texttt{git checkout main -- .gitignore} + Commit).
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Mini-Übung (5 Min.)}
+\begin{enumerate}
+\item Repo mit \texttt{*.pdf} in \texttt{.gitignore} und zwei Branches mit unterschiedlichem \texttt{.tex}.
+\item PDF einmal öffnen, Branch wechseln — PDF-Inhalt oft \textbf{gleich} (alter Build).
+\item Neu kompilieren — PDF passt zum Branch.
+\item Im Git-Panel: nur \texttt{.tex} wechselt sichtbar; \texttt{.pdf} nicht in „Changes“, wenn ignoriert.
+\end{enumerate}
+\vspace{0.3em}
+\textbf{Takeaway:} Branch wechselt die \textbf{Historie der Quellen}; Build-Artefakte sind \textbf{Ihre lokale Aufgabe}.
+\end{frame}
+
+\end{document}
